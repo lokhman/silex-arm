@@ -6,9 +6,12 @@ use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
 
 /**
- * Metadata class.
+ * Entity metadata class.
  *
  * @final
+ *
+ * @author Alexander Lokhman <alex.lokhman@gmail.com>
+ * @link https://github.com/lokhman/silex-arm
  */
 final class Metadata {
 

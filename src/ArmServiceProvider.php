@@ -6,7 +6,7 @@ use Silex\ServiceProviderInterface;
 use Silex\Application;
 
 /**
- * Simple and lightweight Array-like relational mapping library for Silex micro-framework.
+ * Simple and lightweight Array-like Relational Mapping library for Silex micro-framework.
  *
  * @author Alexander Lokhman <alex.lokhman@gmail.com>
  * @link https://github.com/lokhman/silex-arm

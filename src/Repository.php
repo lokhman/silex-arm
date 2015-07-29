@@ -466,8 +466,8 @@ class Repository {
     /**
      * Get MAX of column in the table.
      *
-     * @param string    $column
-     * @param mixed     $expr   [optional]
+     * @param string $column
+     * @param mixed  $expr   [optional]
      *
      * @return integer|null
      *         MAX of column or NULL if empty table
@@ -740,6 +740,7 @@ class Repository {
             $this->postInsert($entity);
         } catch (\Exception $ex) {
             $this->rollback();
+
             throw $ex;
         }
         return $id;
@@ -748,12 +749,13 @@ class Repository {
     /**
      * Insert many entities in one go.
      *
-     * @param array $entities
+     * @param array   $entities
+     * @param boolean $ignoreErrors [optional]
      *
      * @throws \Exception
      * @return void
      */
-    public function insertMany(array $entities) {
+    public function insertMany(array $entities, $ignoreErrors = false) {
         if (!$first = reset($entities)) {
             return;
         }
@@ -766,15 +768,31 @@ class Repository {
             $position = $first[$column];
         }
 
-        try {
-            $this->db->beginTransaction();
+        if ($ignoreErrors) {
+            // simple loop with ignoring errors
             foreach ($entities as $entity) {
-                $this->insert($entity, $position++);
+                try {
+                    $this->insert($entity, $position);
+
+                    // will never be here on Exception
+                    $position++;
+                } catch (\Exception $ex) {
+                    /* continue; */
+                }
             }
-            $this->db->commit();
-        } catch (\Exception $ex) {
-            $this->rollback();
-            throw $ex;
+        } else {
+            try {
+                // new transaction with rollback on error
+                $this->db->beginTransaction();
+                foreach ($entities as $entity) {
+                    $this->insert($entity, $position++);
+                }
+                $this->db->commit();
+            } catch (\Exception $ex) {
+                $this->rollback();
+
+                throw $ex;
+            }
         }
     }
 
@@ -867,6 +885,7 @@ class Repository {
             $this->postUpdate($entity);
         } catch (\Exception $ex) {
             $this->rollback();
+
             throw $ex;
         }
         return $result;
@@ -922,6 +941,7 @@ class Repository {
             $this->postDelete($entity);
         } catch (\Exception $ex) {
             $this->rollback();
+
             throw $ex;
         }
         return $result;
