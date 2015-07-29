@@ -1,0 +1,21 @@
+{
+    "name": "lokhman/silex-arm",
+    "type": "library",
+    "description": "Array-like Relational Mapping provider for Silex micro-framework",
+    "keywords": ["array", "relational", "mapping", "silex"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alexander Lokhman",
+            "email": "alex.lokhman@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": { "Lokhman\\Silex\\ARM\\": "src" }
+    },
+    "require": {
+        "php": ">=5.5.0",
+        "silex": "~1.0",
+        "doctrine/dbal": "~2.5"
+    }
+}
