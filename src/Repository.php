@@ -49,6 +49,25 @@ class Repository {
     }
 
     /**
+     * Repository constructor.
+     *
+     * @param \Silex\Application $app
+     * @param string             $profile
+     * @param string             $table
+     * @param string             $entity
+     */
+    public function __construct(Application $app, $profile, $table, $entity) {
+        $this->app = $app;
+        $this->table = $table;
+        $this->entity = $entity;
+        $this->locale = $app['locale'];
+        $this->db = $app['dbs'][$profile];
+        $this->prefix = $profile === $app['dbs.default'] ? '' : $profile . '.';
+        $this->translate = $app['locale'] != $app['arm.locale'];
+        $this->metadata = $entity::metadata();
+    }
+
+    /**
      * Pre-insert event.
      *
      * @category events
@@ -113,25 +132,6 @@ class Repository {
      * @return void
      */
     protected function postDelete(AbstractEntity $entity) { }
-
-    /**
-     * Repository constructor.
-     *
-     * @param \Silex\Application $app
-     * @param string             $profile
-     * @param string             $table
-     * @param string             $entity
-     */
-    public function __construct(Application $app, $profile, $table, $entity) {
-        $this->app = $app;
-        $this->table = $table;
-        $this->entity = $entity;
-        $this->locale = $app['locale'];
-        $this->db = $app['dbs'][$profile];
-        $this->prefix = $profile === $app['dbs.default'] ? '' : $profile . '.';
-        $this->translate = $app['locale'] != $app['arm.locale'];
-        $this->metadata = $entity::metadata();
-    }
 
     /**
      * Alias for <code>$this->getDatabase()->createQueryBuilder()</code>.
@@ -208,6 +208,17 @@ class Repository {
      */
     public final function getMetadata() {
         return $this->metadata;
+    }
+
+    /**
+     * Check if application runs under foreign locale.
+     *
+     * @final
+     *
+     * @return boolean
+     */
+    public final function isTranslate() {
+        return (bool) $this->translate;
     }
 
     /**
