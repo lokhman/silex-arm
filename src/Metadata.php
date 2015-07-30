@@ -247,6 +247,17 @@ final class Metadata {
     }
 
     /**
+     * Check if column is file.
+     *
+     * @param string $column
+     *
+     * @return boolean
+     */
+    public function isFile($column) {
+        return in_array($column, $this->file);
+    }
+
+    /**
      * Add group column.
      *
      * @param string $column
