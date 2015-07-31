@@ -550,7 +550,10 @@ class Repository {
      */
     private function validateUpdate(AbstractEntity $entity) {
         foreach ($entity as $column => $value) {
-            if ($value === null && $this->metadata->isRequired($column)) {
+            // if value is file and empty ([], null, "")
+            if (!$value && $this->metadata->isFile($column)) {
+                unset($entity[$column]);
+            } elseif ($value === null && $this->metadata->isRequired($column)) {
                 $required[] = $column;
             }
         }
@@ -570,7 +573,7 @@ class Repository {
      *         Expression or NULL if no groups defined
      */
     protected function groupExpression(AbstractEntity $entity) {
-        if (!$groups = $this->metadata->getGroup()) {
+        if (!$groups = $this->metadata->getGroups()) {
             return null;
         }
 
@@ -654,7 +657,7 @@ class Repository {
         $oldPosition = $oldEntity[$column];
 
         // for each group column if exist
-        foreach ($this->metadata->getGroup() as $group) {
+        foreach ($this->metadata->getGroups() as $group) {
             if ($oldEntity[$group] !== $entity[$group]) {
                 // if any group is changed shift positions for old set
                 $this->positionShift($oldEntity, $oldPosition + 1, null, -1);

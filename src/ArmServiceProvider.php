@@ -82,14 +82,15 @@ class ArmServiceProvider implements ServiceProviderInterface {
                     throw new \RuntimeException('Class "' . $repository . '" does not exist.');
                 }
 
-                // initialise repository metadata
-                $entity::init($db->getDatabasePlatform());
-
                 // repository generator
                 $key = $profile === $app['dbs.default'] ? $table : $profile . '.' . $table;
                 $arm[$key] = $app->share(function() use ($app, $repository, $profile, $table, $entity) {
                     return new $repository($app, $profile, $table, $entity);
                 });
+
+                // initialise repository metadata
+                $updir = rtrim($app['arm.updir'], '\\/') . DIRECTORY_SEPARATOR . $key;
+                $entity::init($db->getDatabasePlatform(), $updir);
             }
             return $arm;
         });

@@ -2,6 +2,8 @@
 
 namespace Lokhman\Silex\ARM;
 
+use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
 
@@ -21,12 +23,14 @@ final class Metadata {
 
     /** @var \Doctrine\DBAL\Platforms\AbstractPlatform */
     private $platform;
+    private $updir;
+
     private $schema = [];
     private $primary;
     private $required = [];
     private $trans = [];
-    private $file = [];
-    private $group = [];
+    private $files = [];
+    private $groups = [];
     private $position;
 
     /**
@@ -52,6 +56,25 @@ final class Metadata {
             throw new \RuntimeException(self::EXCEPTION);
         }
         $this->platform = $platform;
+        return $this;
+    }
+
+    /**
+     * Set file upload directory.
+     *
+     * @param string $updir
+     *
+     * @throws \RuntimeException
+     * @return \Lokhman\Silex\ARM\Metadata
+     */
+    public function setUpdir($updir) {
+        if ($this->_locked) {
+            throw new \RuntimeException(self::EXCEPTION);
+        }
+        if (!is_dir($updir) && !mkdir($updir, 0777, true)) {
+            throw new \RuntimeException('Unable to create upload folder.');
+        }
+        $this->updir = $updir;
         return $this;
     }
 
@@ -93,6 +116,38 @@ final class Metadata {
     }
 
     /**
+     * Convert file object to path.
+     *
+     * @param type $file
+     *
+     * @return string
+     */
+    private function fileToPath($file) {
+        if ($file instanceof UploadedFile) {
+            $name = base_convert(uniqid(dechex(mt_rand(0, 1e3))), 16, 36);
+            if ('' !== $extension = $file->getClientOriginalExtension()) {
+                $name .= '.' . mb_strtolower($extension);
+            }
+            return $file->move($this->updir, $name)->getRealPath();
+        } elseif ($file instanceof \SplFileInfo) {
+            return $file->getPathname();
+        } else {
+            return $file;
+        }
+    }
+
+    /**
+     * Convert path to file object.
+     *
+     * @param string $path
+     *
+     * @return Symfony\Component\HttpFoundation\File\File
+     */
+    private function pathToFile($path) {
+        return new File($path, false);
+    }
+
+    /**
      * Get schema database value.
      *
      * @param string $column
@@ -104,6 +159,17 @@ final class Metadata {
         if (!isset($this->schema[$column])) {
             return $value;
         }
+
+        // if column is file
+        if ($value && $this->isFile($column)) {
+            if ($this->schema[$column] === Type::SIMPLE_ARRAY) {
+                $value = array_map([$this, 'fileToPath'], $value);
+            } else {
+                $value = $this->fileToPath($value);
+            }
+        }
+
+        // convert to database value
         $type = Type::getType($this->schema[$column]);
         return $type->convertToDatabaseValue($value, $this->platform);
     }
@@ -120,8 +186,22 @@ final class Metadata {
         if (!isset($this->schema[$column])) {
             return $value;
         }
+
+        // convert to PHP value
         $type = Type::getType($this->schema[$column]);
-        return $type->convertToPHPValue($value, $this->platform);
+        $value = $type->convertToPHPValue($value, $this->platform);
+
+        // if column is file
+        if ($value && $this->isFile($column)) {
+            if ($this->schema[$column] === Type::SIMPLE_ARRAY) {
+                // filter is required to remove "" values from database
+                return array_map([$this, 'pathToFile'], array_filter($value));
+            } else {
+                return $this->pathToFile($value);
+            }
+        }
+
+        return $value;
     }
 
     /**
@@ -242,8 +322,17 @@ final class Metadata {
         if ($this->_locked) {
             throw new \RuntimeException(self::EXCEPTION);
         }
-        $this->file[] = $column;
+        $this->files[] = $column;
         return $this;
+    }
+
+    /**
+     * Get array of file column names.
+     *
+     * @return array
+     */
+    public function getFiles() {
+        return $this->files;
     }
 
     /**
@@ -254,7 +343,7 @@ final class Metadata {
      * @return boolean
      */
     public function isFile($column) {
-        return in_array($column, $this->file);
+        return in_array($column, $this->files);
     }
 
     /**
@@ -269,7 +358,7 @@ final class Metadata {
         if ($this->_locked) {
             throw new \RuntimeException(self::EXCEPTION);
         }
-        $this->group[] = $column;
+        $this->groups[] = $column;
         return $this;
     }
 
@@ -278,8 +367,8 @@ final class Metadata {
      *
      * @return array
      */
-    public function getGroup() {
-        return $this->group;
+    public function getGroups() {
+        return $this->groups;
     }
 
     /**

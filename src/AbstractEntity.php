@@ -4,7 +4,6 @@ namespace Lokhman\Silex\ARM;
 
 use Doctrine\DBAL\Types\Type;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Symfony\Component\HttpFoundation\File\File;
 use Lokhman\Silex\ARM\Exception\EntityException;
 
 /**
@@ -109,17 +108,20 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
      * @static
      *
      * @param \Doctrine\DBAL\Platforms\AbstractPlatform $platform
+     * @param string                                    $updir
      *
      * @throws \Lokhman\Silex\ARM\Exception\EntityException
      * @return void
      */
-    public static final function init(AbstractPlatform $platform) {
+    public static final function init(AbstractPlatform $platform, $updir) {
         if (isset(self::$metadata[static::class])) {
             self::raise('Entity class was already initialised.');
         }
 
         $metadata = new Metadata();
         $metadata->setPlatform($platform);
+        $metadata->setUpdir($updir);
+
         foreach (static::schema() as $column => $types) {
             if ('' == $column = trim($column)) {
                 self::raise('Column name cannot be empty.');
@@ -139,8 +141,10 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
                 } elseif ($type == self::TRANS) {
                     $metadata->addTrans($column);
                 } elseif ($type == self::FILE) {
-                    // file is always STRING
-                    $metadata->addSchema($column, Type::STRING);
+                    if (!in_array(Type::SIMPLE_ARRAY, $types)) {
+                        // if not SIMPLE_ARRAY, file is always STRING
+                        $metadata->addSchema($column, Type::STRING);
+                    }
                     $metadata->addFile($column);
                 } elseif ($type == self::GROUP) {
                     $metadata->addGroup($column);
@@ -218,9 +222,6 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
             self::raise('Undefined column "' . $offset . '".');
         }
         $metadata = self::$metadata[static::class];
-        if ($metadata->isFile($offset)) {
-            return new File($this->data[$offset]);
-        }
         return $metadata->getSchemaPhpValue($offset, $this->data[$offset]);
     }
 
@@ -229,8 +230,8 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
      *
      * @final
      *
-     * @param string    $offset
-     * @param mixed     $value
+     * @param string $offset
+     * @param mixed  $value
      *
      * @throws \Lokhman\Silex\ARM\Exception\EntityException
      * @return void
@@ -240,12 +241,7 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
             self::raise('Entity must have a column defined.');
         }
         $metadata = self::$metadata[static::class];
-        if ($value instanceof File && $metadata->isFile($offset)) {
-            $value = $value->getPathname();
-        } else {
-            $value = $metadata->getSchemaDatabaseValue($offset, $value);
-        }
-        $this->data[$offset] = $value;
+        $this->data[$offset] = $metadata->getSchemaDatabaseValue($offset, $value);
     }
 
     /**
