@@ -550,7 +550,7 @@ class Repository {
      */
     private function validateUpdate(AbstractEntity $entity) {
         foreach ($entity as $column => $value) {
-            // if value is file and empty ([], null, "")
+            // if value is FILE and empty ([], null, "")
             if (!$value && $this->metadata->isFile($column)) {
                 unset($entity[$column]);
             } elseif ($value === null && $this->metadata->isRequired($column)) {
@@ -945,6 +945,12 @@ class Repository {
             $result = $this->db->delete($this->table, [
                 $primary => $entity[$primary],
             ]);
+
+            // delete all files associated with the entity
+            $class = $this->entity;
+            foreach ($this->metadata->getFiles() as $column) {
+                $class::unlink($entity[$column]);
+            }
 
             $this->db->commit();
 

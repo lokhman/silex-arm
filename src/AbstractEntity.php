@@ -4,6 +4,8 @@ namespace Lokhman\Silex\ARM;
 
 use Doctrine\DBAL\Types\Type;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Lokhman\Silex\ARM\Exception\EntityException;
 
 /**
@@ -94,7 +96,7 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
     public static final function raw(AbstractEntity $entity) {
         $data = null;
         foreach ($entity as $key => $value) {
-            if (!$value instanceof Entity) {
+            if (!$value instanceof AbstractEntity) {
                 $data[$key] = $value;
             }
         }
@@ -141,6 +143,9 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
                 } elseif ($type == self::TRANS) {
                     $metadata->addTrans($column);
                 } elseif ($type == self::FILE) {
+                    if (in_array(self::TRANS, $types)) {
+                        self::raise('File column cannot be translatable.');
+                    }
                     if (!in_array(Type::SIMPLE_ARRAY, $types)) {
                         // if not SIMPLE_ARRAY, file is always STRING
                         $metadata->addSchema($column, Type::STRING);
@@ -186,12 +191,63 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
     }
 
     /**
+     * Unlink file(s) associated with column.
+     *
+     * @final
+     * @static
+     *
+     * @param Symfony\Component\HttpFoundation\File\File|array $files
+     *
+     * @return void
+     */
+    public static final function unlink($files) {
+        foreach ((array) $files as $file) {
+            $file->isFile() && unlink($file->getPathname());
+        }
+    }
+
+    /**
      * Entity constructor.
      *
      * @param array $data [optional]
      */
     public function __construct(array $data = null) {
         $this->data = $data ? : [];
+    }
+
+    /**
+     * Convert file object to path.
+     *
+     * @param mixed $file
+     *
+     * @return string
+     */
+    private function fileToPath($file) {
+        if ($file instanceof UploadedFile) {
+            $name = base_convert(uniqid(dechex(mt_rand(1, 1e3))), 16, 36);
+            if ('' !== $extension = $file->getClientOriginalExtension()) {
+                $name .= '.' . mb_strtolower($extension);
+            }
+            $metadata = self::$metadata[static::class];
+            return $file->move($metadata->getUpdir(), $name)->getBasename();
+        } elseif ($file instanceof \SplFileInfo) {
+            // can be used for bulk insert
+            return $file->getBasename();
+        } else {
+            return $file;
+        }
+    }
+
+    /**
+     * Convert path to file object.
+     *
+     * @param string $path
+     *
+     * @return \Symfony\Component\HttpFoundation\File\File
+     */
+    private function pathToFile($path) {
+        $updir = self::$metadata[static::class]->getUpdir();
+        return new File($updir . DIRECTORY_SEPARATOR . $path, false);
     }
 
     /**
@@ -221,8 +277,22 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
         if (!array_key_exists($offset, $this->data)) {
             self::raise('Undefined column "' . $offset . '".');
         }
+
+        // get current value
         $metadata = self::$metadata[static::class];
-        return $metadata->getSchemaPhpValue($offset, $this->data[$offset]);
+        $value = $metadata->getSchemaPhpValue($offset, $this->data[$offset]);
+
+        // if column is file
+        if ($value && $metadata->isFile($offset)) {
+            if ($metadata->isSchema($offset, Type::SIMPLE_ARRAY)) {
+                // filter is required to remove "" values from database
+                return array_map([$this, 'pathToFile'], array_filter($value));
+            } else {
+                return $this->pathToFile($value);
+            }
+        }
+
+        return $value;
     }
 
     /**
@@ -240,7 +310,24 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
         if ($offset === null) {
             self::raise('Entity must have a column defined.');
         }
+
+        // if column is file
         $metadata = self::$metadata[static::class];
+        if ($value && $metadata->isFile($offset)) {
+            if ($metadata->isSchema($offset, Type::SIMPLE_ARRAY)) {
+                // filter is required to remove "" values from database
+                $value = array_map([$this, 'fileToPath'], array_filter($value));
+            } else {
+                $value = $this->fileToPath($value);
+            }
+
+            if ($value) {
+                // unlink old files if new file(s) were created
+                self::unlink($this[$offset]);
+            }
+        }
+
+        // save new value
         $this->data[$offset] = $metadata->getSchemaDatabaseValue($offset, $value);
     }
 
