@@ -697,6 +697,22 @@ class Repository {
     }
 
     /**
+     * Delete all files associated with the entity.
+     *
+     * @param AbstractEntity $entity
+     *
+     * @return void
+     */
+    private function unlink(AbstractEntity $entity) {
+        $class = $this->entity;
+        foreach ($this->metadata->getFiles() as $column) {
+            if (isset($entity[$column])) {
+                $class::unlink($entity[$column]);
+            }
+        }
+    }
+
+    /**
      * Insert entity to the database.
      *
      * @param \Lokhman\Silex\ARM\AbstractEntity $entity
@@ -753,6 +769,7 @@ class Repository {
             // post-insert event
             $this->postInsert($entity);
         } catch (\Exception $ex) {
+            $this->unlink($entity);
             $this->rollback();
 
             throw $ex;
@@ -803,6 +820,9 @@ class Repository {
                 }
                 $this->db->commit();
             } catch (\Exception $ex) {
+                foreach ($entities as $entity) {
+                    $this->unlink($entity);
+                }
                 $this->rollback();
 
                 throw $ex;
@@ -898,6 +918,7 @@ class Repository {
             // post-update event
             $this->postUpdate($entity);
         } catch (\Exception $ex) {
+            $this->unlink($entity);
             $this->rollback();
 
             throw $ex;
@@ -946,11 +967,8 @@ class Repository {
                 $primary => $entity[$primary],
             ]);
 
-            // delete all files associated with the entity
-            $class = $this->entity;
-            foreach ($this->metadata->getFiles() as $column) {
-                $class::unlink($entity[$column]);
-            }
+            // delete all files
+            $this->unlink($entity);
 
             $this->db->commit();
 

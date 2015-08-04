@@ -201,7 +201,7 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
      * @return void
      */
     public static final function unlink($files) {
-        foreach ((array) $files as $file) {
+        foreach (is_array($files) ? $files : [$files] as $file) {
             $file->isFile() && unlink($file->getPathname());
         }
     }
@@ -321,9 +321,9 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
                 $value = $this->fileToPath($value);
             }
 
-            if ($value) {
-                // unlink old files if new file(s) were created
-                self::unlink($this[$offset]);
+            // unlink old files if new file(s) were created
+            if ($value && $backup = $this[$offset]) {
+                self::unlink($backup);
             }
         }
 
