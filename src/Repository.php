@@ -433,14 +433,14 @@ class Repository {
     }
 
     /**
-     * Find all entites ordered by `position` if not specified otherwise.
+     * Find multiple entites ordered by `position` if not specified otherwise.
      *
      * @param mixed $expr  [optional]
      * @param array $order [optional]
      *
      * @return \Iterator
      */
-    public function findAll($expr = null, array $order = []) {
+    public function findMany($expr = null, array $order = []) {
         $qb = $this->qb()
             ->select($this->metadata->getColumns())
             ->from($this->table)
