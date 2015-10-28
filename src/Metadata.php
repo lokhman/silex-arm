@@ -69,7 +69,7 @@ final class Metadata {
         if ($this->_locked) {
             throw new \RuntimeException(self::EXCEPTION);
         }
-        if (!is_dir($updir) && !mkdir($updir, 0777, true)) {
+        if ($updir && !is_dir($updir) && !mkdir($updir, 0777, true)) {
             throw new \RuntimeException('Unable to create upload folder.');
         }
         $this->updir = $updir;

@@ -110,12 +110,12 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
      * @static
      *
      * @param \Doctrine\DBAL\Platforms\AbstractPlatform $platform
-     * @param string                                    $updir
+     * @param string                                    $updir [optional]
      *
      * @throws \Lokhman\Silex\ARM\Exception\EntityException
      * @return void
      */
-    public static final function init(AbstractPlatform $platform, $updir) {
+    public static final function init(AbstractPlatform $platform, $updir = null) {
         if (isset(self::$metadata[static::class])) {
             self::raise('Entity class was already initialised.');
         }
@@ -143,6 +143,9 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
                 } elseif ($type == self::TRANS) {
                     $metadata->addTrans($column);
                 } elseif ($type == self::FILE) {
+                    if ($updir === null) {
+                        self::raise('Configure "arm.updir" setting to use file columns.');
+                    }
                     if (in_array(self::TRANS, $types)) {
                         self::raise('File column cannot be translatable.');
                     }

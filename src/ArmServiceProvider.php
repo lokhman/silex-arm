@@ -88,8 +88,12 @@ class ArmServiceProvider implements ServiceProviderInterface {
                     return new $repository($app, $profile, $table, $entity);
                 });
 
+                $updir = null;
+                if (isset($app['arm.updir'])) {
+                    $updir = rtrim($app['arm.updir'], '\\/') . DIRECTORY_SEPARATOR . $key;
+                }
+
                 // initialise repository metadata
-                $updir = rtrim($app['arm.updir'], '\\/') . DIRECTORY_SEPARATOR . $key;
                 $entity::init($db->getDatabasePlatform(), $updir);
             }
             return $arm;

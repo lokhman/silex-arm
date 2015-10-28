@@ -590,7 +590,7 @@ class Repository {
     }
 
     /**
-     * Calculate and/or set position for INSERT.
+     * Calculate and set position for INSERT.
      *
      * @param \Lokhman\Silex\ARM\AbstractEntity $entity
      * @param integer|null                      $position [optional]
@@ -640,7 +640,7 @@ class Repository {
     }
 
     /**
-     * Calculate and position for UPDATE.
+     * Calculate and set position for UPDATE.
      *
      * @todo Shift limitation on group and position change at once
      *
