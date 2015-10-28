@@ -282,7 +282,7 @@ class Repository {
                 goto keep;  // 'x.y xyz'
             } elseif ($part == '*') {  // '*'
                 foreach ($tables as $alias => $repository) {
-                    $table = $repository->getTable();
+                    $alias = $alias ? : $table = $repository->getTable();
                     foreach ($repository->getMetadata()->getColumns() as $column) {
                         $select[] = $this->select($qb, $repository, $alias, $column);
                     }
