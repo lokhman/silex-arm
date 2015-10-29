@@ -494,6 +494,24 @@ class Repository {
     }
 
     /**
+     * Begin transaction alias.
+     *
+     * @return void
+     */
+    public function transaction() {
+        $this->db->beginTransaction();
+    }
+
+    /**
+     * Commit transaction alias.
+     *
+     * @return void
+     */
+    public function commit() {
+        $this->db->commit();
+    }
+
+    /**
      * Safe rollback.
      *
      * @return void
