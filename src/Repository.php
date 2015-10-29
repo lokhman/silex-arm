@@ -68,6 +68,28 @@ class Repository {
     }
 
     /**
+     * Pre-persist event.
+     *
+     * @category events
+     *
+     * @param \Lokhman\Silex\ARM\AbstractEntity $entity
+     *
+     * @return void
+     */
+    protected function prePersist(AbstractEntity $entity) { }
+
+    /**
+     * Post-persist event.
+     *
+     * @category events
+     *
+     * @param \Lokhman\Silex\ARM\AbstractEntity $entity
+     *
+     * @return void
+     */
+    protected function postPersist(AbstractEntity $entity) { }
+
+    /**
      * Pre-insert event.
      *
      * @category events
@@ -530,11 +552,17 @@ class Repository {
      * @return mixed
      */
     public function persist(AbstractEntity $entity) {
+        // pre-persist event
+        $this->prePersist($entity);
+
         if (isset($entity[$this->metadata->getPrimary()])) {
             return $this->update($entity);
         } else {
             return $this->insert($entity);
         }
+
+        // post-persist event
+        $this->postPersist($entity);
     }
 
     /**
