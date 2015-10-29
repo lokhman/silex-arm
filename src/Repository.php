@@ -1004,11 +1004,13 @@ class Repository {
                 $this->positionShift($entity, $position + 1, null, -1);
             }
 
-            // delete all translations for entity
-            $this->db->delete($this->app['arm.trans'], [
-                '_table' => $this->table,
-                '_key' => $entity[$primary],
-            ]);
+            if ($this->translate) {
+                // delete all translations for entity
+                $this->db->delete($this->app['arm.trans'], [
+                    '_table' => $this->table,
+                    '_key' => $entity[$primary],
+                ]);
+            }
 
             // attempt to delete entity
             $result = $this->db->delete($this->table, [
