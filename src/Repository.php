@@ -764,7 +764,9 @@ class Repository {
             }
 
             $this->db->commit();
-            $entity['id'] = $id;
+
+            // set primary key value
+            $entity[$this->metadata->getPrimary()] = $id;
 
             // post-insert event
             $this->postInsert($entity);
