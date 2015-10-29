@@ -212,10 +212,16 @@ abstract class AbstractEntity implements \ArrayAccess, \IteratorAggregate, \Seri
     /**
      * Entity constructor.
      *
-     * @param array $data [optional]
+     * @param mixed $data [optional]
      */
-    public function __construct(array $data = null) {
-        $this->data = $data ? : [];
+    public function __construct($data = null) {
+        if ($data === null) {
+            $this->data = [];
+        } elseif ($data instanceof AbstractEntity) {
+            $this->data = self::raw($data);
+        } else {
+            $this->data = (array) $data;
+        }
     }
 
     /**
